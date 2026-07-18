@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>9-Button Unique Pattern Memory Game</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e24;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            user-select: none;
+        }
+
+        .game-container {
+            text-align: center;
+            background-color: #2a2a35;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #00adb5;
+        }
+
+        .score-board {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        #score {
+            color: #00adb5;
+            font-size: 1.5rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 15px;
+            margin: 20px auto;
+        }
+
+        .cell {
+            background-color: #3e3e4f;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .cell.active {
+            background-color: #00adb5 !important;
+            box-shadow: 0 0 20px #00adb5;
+            transform: scale(0.95);
+        }
+
+        .cell.wrong {
+            background-color: #ff2e63 !important;
+            box-shadow: 0 0 20px #ff2e63;
+        }
+
+        .cell.disabled {
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        .cell:active:not(.disabled) {
+            transform: scale(0.95);
+        }
+
+        #status {
+            margin-top: 15px;
+            font-size: 1.1rem;
+            min-height: 1.5em;
+            color: #eeeeee;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1rem;
+            background-color: #3e3e4f;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .toggle-wrapper input {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+            accent-color: #00adb5;
+        }
+
+        #start-btn {
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            background-color: #ff2e63;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: 0 4px 10px rgba(255, 46, 99, 0.3);
+        }
+
+        #start-btn:hover {
+            background-color: #e02856;
+        }
+
+        #start-btn:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h1>Memory Grid</h1>
+        <div class="score-board">Patterns Cleared: <span id="score">0</span></div>
+        
+        <div class="grid" id="grid">
+            <button class="cell" data-index="0"></button>
+            <button class="cell" data-index="1"></button>
+            <button class="cell" data-index="2"></button>
+            <button class="cell" data-index="3"></button>
+            <button class="cell" data-index="4"></button>
+            <button class="cell" data-index="5"></button>
+            <button class="cell" data-index="6"></button>
+            <button class="cell" data-index="7"></button>
+            <button class="cell" data-index="8"></button>
+        </div>
+
+        <div id="status">Press Start to Begin!</div>
+        
+        <div class="controls">
+            <label class="toggle-wrapper" title="Lights stay on until the whole pattern is shown">
+                <input type="checkbox" id="easy-mode-toggle">
+                Easy Mode (Keep Lights On)
+            </label>
+            <button id="start-btn">Start Game</button>
+        </div>
+    </div>
+
+    <script>
+        const buttons = document.querySelectorAll('.cell');
+        const scoreDisplay = document.getElementById('score');
+        const statusText = document.getElementById('status');
+        const startBtn = document.getElementById('start-btn');
+        const easyModeToggle = document.getElementById('easy-mode-toggle');
+
+        let pattern = [];
+        let userPattern = [];
+        let score = 0;
+        let isDisplayingPattern = false;
+        let isPlaying = false;
+
+        startBtn.addEventListener('click', startGame);
+
+        buttons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const index = parseInt(btn.getAttribute('data-index'));
+                handleButtonClick(index, btn);
+            });
+        });
+
+        function startGame() {
+            score = 0;
+            scoreDisplay.textContent = score;
+            isPlaying = true;
+            startBtn.style.display = 'none';
+            resetButtonStyles();
+            nextRound();
+        }
+
+        function nextRound() {
+            userPattern = [];
+            pattern = generateUniquePattern();
+            displayPattern();
+        }
+
+        function generateUniquePattern() {
+            let arr = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        async function displayPattern() {
+            isDisplayingPattern = true;
+            statusText.textContent = "Watch the pattern closely...";
+            setButtonsDisabledState(true);
+            
+            await sleep(200);
+
+            const isEasyMode = easyModeToggle.checked;
+
+            for (let i = 0; i < pattern.length; i++) {
+                if (!isPlaying) return; 
+                
+                const btnIndex = pattern[i];
+                const btn = buttons[btnIndex];
+                
+                btn.classList.add('active');
+                await sleep(600); 
+                
+                // If Easy Mode is OFF, turn the button back off immediately
+                if (!isEasyMode) {
+                    btn.classList.remove('active');
+                }
+                
+                if (i < pattern.length - 1) {
+                    await sleep(300);
+                }
+            }
+            
+            // If Easy Mode is ON, give the player a second to see the final complete shape before turning them all off
+            if (isEasyMode && isPlaying) {
+                await sleep(200);
+                buttons.forEach(btn => btn.classList.remove('active'));
+            }
+            
+            isDisplayingPattern = false;
+            setButtonsDisabledState(false);
+            statusText.textContent = "Your turn! Repeat all 9 buttons.";
+        }
+
+        function handleButtonClick(index, btn) {
+            if (isDisplayingPattern || !isPlaying) return;
+            
+            const expectedIndex = pattern[userPattern.length];
+            
+            if (index === expectedIndex) {
+                userPattern.push(index);
+                
+                btn.classList.add('active');
+                setTimeout(() => btn.classList.remove('active'), 150);
+
+                if (userPattern.length === pattern.length) {
+                    score++;
+                    scoreDisplay.textContent = score;
+                    statusText.textContent = "Perfect! Generating next pattern...";
+                    isDisplayingPattern = true; 
+                    setTimeout(nextRound, 1200);
+                }
+            } else {
+                btn.classList.add('wrong');
+                statusText.textContent = "Game Over! You pressed the wrong button.";
+                isPlaying = false;
+                startBtn.textContent = "Try Again";
+                startBtn.style.display = 'inline-block';
+                setButtonsDisabledState(true);
+            }
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function setButtonsDisabledState(disabled) {
+            buttons.forEach(btn => {
+                if (disabled) {
+                    btn.classList.add('disabled');
+                } else {
+                    btn.classList.remove('disabled');
+                }
+            });
+        }
+
+        function resetButtonStyles() {
+            buttons.forEach(btn => {
+                btn.classList.remove('wrong', 'active', 'disabled');
+            });
+        }
+    </script>
+</body>
+</html>
