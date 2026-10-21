@@ -27,6 +27,10 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             touch-action: none; 
             position: relative;
+            /* Lock the width so long text doesn't stretch the container */
+            width: 390px;
+            max-width: 92vw;
+            box-sizing: border-box;
         }
 
         h1 {
@@ -52,6 +56,7 @@
             grid-template-rows: repeat(3, 100px);
             gap: 15px;
             margin: 20px auto;
+            justify-content: center;
         }
 
         @media (max-width: 400px) {
@@ -96,12 +101,16 @@
         #status {
             margin-top: 15px;
             font-size: 1.1rem;
-            min-height: 1.5em;
+            /* Increased min-height to accommodate 2 lines of text if it wraps */
+            min-height: 2.8em; 
             color: #eeeeee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .controls {
-            margin-top: 20px;
+            margin-top: 15px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -111,7 +120,10 @@
         .control-row {
             display: flex;
             gap: 10px;
-            align-items: center;
+            /* Force children to share the exact same height */
+            height: 44px; 
+            align-items: stretch;
+            justify-content: center;
         }
 
         .toggle-wrapper {
@@ -120,10 +132,12 @@
             gap: 10px;
             font-size: 1rem;
             background-color: #3e3e4f;
-            padding: 8px 15px;
+            /* Replaced vertical padding with 0 so it relies strictly on the container height */
+            padding: 0 15px; 
             border-radius: 8px;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
         }
 
         .toggle-wrapper input {
@@ -131,10 +145,11 @@
             width: 18px;
             height: 18px;
             accent-color: #00adb5;
+            margin: 0;
         }
 
         .btn-secondary {
-            padding: 8px 15px;
+            padding: 0 15px;
             font-size: 1rem;
             background-color: #3e3e4f;
             color: white;
@@ -143,6 +158,10 @@
             cursor: pointer;
             transition: background-color 0.2s;
             -webkit-tap-highlight-color: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
         }
 
         .btn-secondary:hover { background-color: #4f4f66; }
@@ -160,6 +179,8 @@
             box-shadow: 0 4px 10px rgba(255, 46, 99, 0.3);
             -webkit-tap-highlight-color: transparent;
             margin-top: 5px;
+            width: 100%;
+            max-width: 250px;
         }
 
         #start-btn:hover { background-color: #e02856; }
@@ -273,7 +294,6 @@
         const startBtn = document.getElementById('start-btn');
         const easyModeToggle = document.getElementById('easy-mode-toggle');
         
-        // Modal elements
         const lengthBtn = document.getElementById('length-btn');
         const lengthModal = document.getElementById('length-modal');
         const closeModalBtn = document.getElementById('close-modal');
@@ -284,9 +304,8 @@
         let score = 0;
         let isDisplayingPattern = false;
         let isPlaying = false;
-        let currentPatternLength = 9; // Default length
+        let currentPatternLength = 9; 
 
-        // Modal Logic
         lengthBtn.addEventListener('click', () => {
             lengthModal.style.display = 'flex';
         });
@@ -301,7 +320,6 @@
                 lengthBtn.textContent = `Length: ${currentPatternLength}`;
                 lengthModal.style.display = 'none';
                 
-                // Reset the game state when a new length is selected
                 isPlaying = false;
                 startBtn.style.display = 'inline-block';
                 startBtn.textContent = "Start Game";
@@ -317,6 +335,122 @@
         buttons.forEach((btn) => {
             btn.addEventListener('click', () => {
                 const index = parseInt(btn.getAttribute('data-index'));
+                handleButtonClick(index, btn);
+            });
+        });
+
+        function startGame() {
+            score = 0;
+            scoreDisplay.textContent = score;
+            isPlaying = true;
+            startBtn.style.display = 'none';
+            resetButtonStyles();
+            nextRound();
+        }
+
+        function nextRound() {
+            userPattern = [];
+            pattern = generateUniquePattern();
+            displayPattern();
+        }
+
+        function generateUniquePattern() {
+            let arr = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr.slice(0, currentPatternLength);
+        }
+
+        async function displayPattern() {
+            isDisplayingPattern = true;
+            statusText.textContent = "Watch the pattern closely...";
+            setButtonsDisabledState(true);
+            
+            await sleep(800);
+
+            const isEasyMode = easyModeToggle.checked;
+
+            for (let i = 0; i < pattern.length; i++) {
+                if (!isPlaying) return; 
+                
+                const btnIndex = pattern[i];
+                const btn = buttons[btnIndex];
+                
+                btn.classList.add('active');
+                await sleep(600); 
+                
+                if (!isEasyMode) {
+                    btn.classList.remove('active');
+                }
+                
+                if (i < pattern.length - 1) {
+                    await sleep(300);
+                }
+            }
+            
+            if (isEasyMode && isPlaying) {
+                await sleep(800);
+                buttons.forEach(btn => btn.classList.remove('active'));
+            }
+            
+            isDisplayingPattern = false;
+            setButtonsDisabledState(false);
+            statusText.textContent = `Your turn! Repeat all ${currentPatternLength} buttons.`;
+        }
+
+        function handleButtonClick(index, btn) {
+            if (isDisplayingPattern || !isPlaying) return;
+            
+            const expectedIndex = pattern[userPattern.length];
+            
+            if (index === expectedIndex) {
+                userPattern.push(index);
+                
+                btn.classList.add('active');
+                setTimeout(() => btn.classList.remove('active'), 150);
+
+                if (userPattern.length === pattern.length) {
+                    score++;
+                    scoreDisplay.textContent = score;
+                    statusText.textContent = "Perfect! Generating next pattern...";
+                    isDisplayingPattern = true; 
+                    setTimeout(nextRound, 1200);
+                }
+            } else {
+                btn.classList.add('wrong');
+                statusText.textContent = "Game Over! You pressed the wrong button.";
+                isPlaying = false;
+                startBtn.textContent = "Try Again";
+                startBtn.style.display = 'inline-block';
+                setButtonsDisabledState(true);
+            }
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function setButtonsDisabledState(disabled) {
+            buttons.forEach(btn => {
+                if (disabled) {
+                    btn.classList.add('disabled');
+                } else {
+                    btn.classList.remove('disabled');
+                }
+            });
+        }
+
+        function resetButtonStyles() {
+            buttons.forEach(btn => {
+                btn.classList.remove('wrong', 'active', 'disabled');
+            });
+        }
+    </script>
+</body>
+</html>
+etAttribute('data-index'));
                 handleButtonClick(index, btn);
             });
         });
