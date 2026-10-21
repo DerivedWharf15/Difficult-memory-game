@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>9-Button Unique Pattern Memory Game</title>
+    <title>Variable Length Unique Pattern Memory Game</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -16,7 +16,6 @@
             height: 100vh;
             margin: 0;
             user-select: none;
-            /* Prevents the entire page from being scrolled or bounced on mobile */
             overflow: hidden; 
         }
 
@@ -26,8 +25,8 @@
             padding: 30px;
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            /* Prevents touch gestures from interfering with the game area */
             touch-action: none; 
+            position: relative;
         }
 
         h1 {
@@ -55,7 +54,6 @@
             margin: 20px auto;
         }
 
-        /* Responsive grid for smaller mobile screens */
         @media (max-width: 400px) {
             .grid {
                 grid-template-columns: repeat(3, 80px);
@@ -71,9 +69,7 @@
             cursor: pointer;
             transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            /* Disables double-tap to zoom specifically on the buttons */
             touch-action: manipulation;
-            /* Removes the default blue tap highlight on mobile browsers */
             -webkit-tap-highlight-color: transparent; 
         }
 
@@ -109,7 +105,13 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
         }
 
         .toggle-wrapper {
@@ -131,8 +133,22 @@
             accent-color: #00adb5;
         }
 
+        .btn-secondary {
+            padding: 8px 15px;
+            font-size: 1rem;
+            background-color: #3e3e4f;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-secondary:hover { background-color: #4f4f66; }
+
         #start-btn {
-            padding: 12px 30px;
+            padding: 12px 40px;
             font-size: 1.1rem;
             font-weight: bold;
             background-color: #ff2e63;
@@ -143,15 +159,61 @@
             transition: background-color 0.2s, transform 0.1s;
             box-shadow: 0 4px 10px rgba(255, 46, 99, 0.3);
             -webkit-tap-highlight-color: transparent;
+            margin-top: 5px;
         }
 
-        #start-btn:hover {
-            background-color: #e02856;
+        #start-btn:hover { background-color: #e02856; }
+        #start-btn:active { transform: scale(0.98); }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(3px);
         }
 
-        #start-btn:active {
-            transform: scale(0.98);
+        .modal-content {
+            background-color: #2a2a35;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            width: 80%;
+            max-width: 300px;
         }
+
+        .modal-content h3 {
+            margin-top: 0;
+            color: #00adb5;
+        }
+
+        .length-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .len-btn {
+            background-color: #3e3e4f;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 15px 0;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .len-btn:hover { background-color: #00adb5; }
+        .len-btn:active { transform: scale(0.95); }
+
     </style>
 </head>
 <body>
@@ -175,11 +237,32 @@
         <div id="status">Press Start to Begin!</div>
         
         <div class="controls">
-            <label class="toggle-wrapper" title="Lights stay on until the whole pattern is shown">
-                <input type="checkbox" id="easy-mode-toggle">
-                Easy Mode (Keep Lights On)
-            </label>
+            <div class="control-row">
+                <label class="toggle-wrapper" title="Lights stay on until the whole pattern is shown">
+                    <input type="checkbox" id="easy-mode-toggle">
+                    Easy Mode
+                </label>
+                <button id="length-btn" class="btn-secondary">Length: 9</button>
+            </div>
             <button id="start-btn">Start Game</button>
+        </div>
+    </div>
+
+    <!-- Modal Menu for Pattern Length -->
+    <div class="modal" id="length-modal">
+        <div class="modal-content">
+            <h3>Select Length</h3>
+            <div class="length-grid">
+                <button class="len-btn" data-len="2">2</button>
+                <button class="len-btn" data-len="3">3</button>
+                <button class="len-btn" data-len="4">4</button>
+                <button class="len-btn" data-len="5">5</button>
+                <button class="len-btn" data-len="6">6</button>
+                <button class="len-btn" data-len="7">7</button>
+                <button class="len-btn" data-len="8">8</button>
+                <button class="len-btn" data-len="9">9</button>
+            </div>
+            <button class="btn-secondary" id="close-modal" style="width: 100%; padding: 12px;">Cancel</button>
         </div>
     </div>
 
@@ -189,12 +272,45 @@
         const statusText = document.getElementById('status');
         const startBtn = document.getElementById('start-btn');
         const easyModeToggle = document.getElementById('easy-mode-toggle');
+        
+        // Modal elements
+        const lengthBtn = document.getElementById('length-btn');
+        const lengthModal = document.getElementById('length-modal');
+        const closeModalBtn = document.getElementById('close-modal');
+        const lenButtons = document.querySelectorAll('.len-btn');
 
         let pattern = [];
         let userPattern = [];
         let score = 0;
         let isDisplayingPattern = false;
         let isPlaying = false;
+        let currentPatternLength = 9; // Default length
+
+        // Modal Logic
+        lengthBtn.addEventListener('click', () => {
+            lengthModal.style.display = 'flex';
+        });
+
+        closeModalBtn.addEventListener('click', () => {
+            lengthModal.style.display = 'none';
+        });
+
+        lenButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentPatternLength = parseInt(btn.getAttribute('data-len'));
+                lengthBtn.textContent = `Length: ${currentPatternLength}`;
+                lengthModal.style.display = 'none';
+                
+                // Reset the game state when a new length is selected
+                isPlaying = false;
+                startBtn.style.display = 'inline-block';
+                startBtn.textContent = "Start Game";
+                statusText.textContent = "Press Start to Begin!";
+                score = 0;
+                scoreDisplay.textContent = score;
+                resetButtonStyles();
+            });
+        });
 
         startBtn.addEventListener('click', startGame);
 
@@ -222,11 +338,13 @@
 
         function generateUniquePattern() {
             let arr = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+            // Shuffle the array
             for (let i = arr.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [arr[i], arr[j]] = [arr[j], arr[i]];
             }
-            return arr;
+            // Return only the number of buttons requested by the user's setting
+            return arr.slice(0, currentPatternLength);
         }
 
         async function displayPattern() {
@@ -263,7 +381,7 @@
             
             isDisplayingPattern = false;
             setButtonsDisabledState(false);
-            statusText.textContent = "Your turn! Repeat all 9 buttons.";
+            statusText.textContent = `Your turn! Repeat all ${currentPatternLength} buttons.`;
         }
 
         function handleButtonClick(index, btn) {
